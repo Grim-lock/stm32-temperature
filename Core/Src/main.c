@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include "ssd1306.h"
 #include "fonts.h"
 /* USER CODE END Includes */
@@ -48,6 +49,8 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart1;
 
 float lower_t = 100;
+
+float higher_t = 0;
 
 /* USER CODE BEGIN PV */
 
@@ -199,7 +202,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	char temperature_str[16];
 	char lower_t_str[16];
+	char higher_t_str[16];
 	char humidity_str[16];
+	bool dis_low = true;
+
   while (1)
   {
 		channel = 0x2; // 0x01 ???? 0, 0x02 ???? 1...
@@ -226,6 +232,10 @@ int main(void)
 						if (lower_t > temperature) {
 							lower_t = temperature;
 							memcpy(lower_t_str, temperature_str, 16);
+						}
+						if (higher_t < temperature) {
+							higher_t = temperature;
+							memcpy(higher_t_str, temperature_str, 16);
 						}
         }
     }
@@ -264,10 +274,19 @@ int main(void)
 		ssd1306_WriteString("Humi:", Font_7x10, White);
 		ssd1306_SetCursor(0, 30);
 		ssd1306_WriteString(humidity_str, Font_7x10, White);
-		ssd1306_SetCursor(0, 40);
-		ssd1306_WriteString("LowerT", Font_7x10, White);
-		ssd1306_SetCursor(0, 50);
-		ssd1306_WriteString(lower_t_str, Font_7x10, White);
+		if (dis_low) {
+			ssd1306_SetCursor(0, 40);
+			ssd1306_WriteString("LowT", Font_7x10, White);
+			ssd1306_SetCursor(0, 50);
+			ssd1306_WriteString(lower_t_str, Font_7x10, White);
+			dis_low = false;
+		} else {
+			ssd1306_SetCursor(0, 40);
+			ssd1306_WriteString("HighT", Font_7x10, White);
+			ssd1306_SetCursor(0, 50);
+			ssd1306_WriteString(higher_t_str, Font_7x10, White);
+			dis_low = true;
+		}
 		ssd1306_UpdateScreen(&hi2c1);
 		DEBUG_PRINT("Temp:%s Humi:%s\r\n", temperature_str, humidity_str);
 		HAL_Delay(200);

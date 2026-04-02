@@ -18,20 +18,36 @@
 #include "stm32f1xx_hal.h"
 #include "fonts.h"
 
+#define DISPLAY_90_DEGREE 1
+
 // I2c address
 #ifndef SSD1306_I2C_ADDR
 #define SSD1306_I2C_ADDR        0x78
 #endif // SSD1306_I2C_ADDR
+
+#if DISPLAY_90_DEGREE
+// SSD1306 width in pixels
+#ifndef SSD1306_WIDTH
+#define SSD1306_WIDTH           48
+#endif // SSD1306_WIDTH
+
+// SSD1306 LCD height in pixels
+#ifndef SSD1306_HEIGHT
+#define SSD1306_HEIGHT          64
+#endif // SSD1306_HEIGHT
+
+#else
 
 // SSD1306 width in pixels
 #ifndef SSD1306_WIDTH
 #define SSD1306_WIDTH           64
 #endif // SSD1306_WIDTH
 
-// SSD1306 LCD height in pixels
 #ifndef SSD1306_HEIGHT
 #define SSD1306_HEIGHT          48
 #endif // SSD1306_HEIGHT
+
+#endif
 
 #ifndef SSD1306_COM_LR_REMAP
 #define SSD1306_COM_LR_REMAP    0

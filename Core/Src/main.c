@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <string.h>
 #include "ssd1306.h"
 #include "fonts.h"
 /* USER CODE END Includes */
@@ -45,6 +46,8 @@
 I2C_HandleTypeDef hi2c1;
 
 UART_HandleTypeDef huart1;
+
+float lower_t = 100;
 
 /* USER CODE BEGIN PV */
 
@@ -87,7 +90,7 @@ static void MX_USART1_UART_Init(void);
     #define DEBUG_ERR(fmt, ...)
 #endif
 
-void get_float_str(char *buf, float temp, char *unit_str) {
+void get_float_str(char *buf, float temp, char *pre_str, char *unit_str) {
     int32_t integral = (int32_t)temp;
     int32_t fractional = (int32_t)((temp - integral) * 100);
     if(fractional < 0) fractional = -fractional;
@@ -195,6 +198,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	char temperature_str[16];
+	char lower_t_str[16];
 	char humidity_str[16];
   while (1)
   {
@@ -218,7 +222,11 @@ int main(void)
             uint16_t raw_t = (data[0] << 8) | data[1];
             raw_t &= ~0x0003; // ?????????
             temperature = -46.85f + 175.72f * ((float)raw_t / 65536.0f);
-            get_float_str(temperature_str, temperature, "C");
+            get_float_str(temperature_str, temperature, "T", "C");
+						if (lower_t > temperature) {
+							lower_t = temperature;
+							memcpy(lower_t_str, temperature_str, 16);
+						}
         }
     }
 
@@ -233,7 +241,7 @@ int main(void)
             uint16_t raw_h = (data[0] << 8) | data[1];
             raw_h &= ~0x0003; // ?????
             humidity = -6.0f + 125.0f * ((float)raw_h / 65536.0f);
-            get_float_str(humidity_str, humidity, "%");
+            get_float_str(humidity_str, humidity, "H", "%");
         }
     }
 
@@ -248,14 +256,18 @@ int main(void)
     /* USER CODE BEGIN 3 */
 		ssd1306_Fill(Black);
 
-		ssd1306_SetCursor(0, 4);
-		ssd1306_WriteString("Temp", Font_7x10, White);
-		ssd1306_SetCursor(14, 14);
+		ssd1306_SetCursor(0, 0);
+		ssd1306_WriteString("Temp:", Font_7x10, White);
+		ssd1306_SetCursor(0, 10);
 		ssd1306_WriteString(temperature_str, Font_7x10, White);
-		ssd1306_SetCursor(0, 24);
-		ssd1306_WriteString("Humi", Font_7x10, White);
-		ssd1306_SetCursor(14, 34);
+		ssd1306_SetCursor(0, 20);
+		ssd1306_WriteString("Humi:", Font_7x10, White);
+		ssd1306_SetCursor(0, 30);
 		ssd1306_WriteString(humidity_str, Font_7x10, White);
+		ssd1306_SetCursor(0, 40);
+		ssd1306_WriteString("LowerT", Font_7x10, White);
+		ssd1306_SetCursor(0, 50);
+		ssd1306_WriteString(lower_t_str, Font_7x10, White);
 		ssd1306_UpdateScreen(&hi2c1);
 		DEBUG_PRINT("Temp:%s Humi:%s\r\n", temperature_str, humidity_str);
 		HAL_Delay(200);

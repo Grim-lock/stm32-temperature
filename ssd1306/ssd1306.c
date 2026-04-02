@@ -1,6 +1,5 @@
 #include "ssd1306.h"
 
-
 // Screenbuffer
 static uint8_t SSD1306_Buffer[SSD1306_WIDTH * SSD1306_HEIGHT / 8];
 
@@ -27,47 +26,48 @@ uint8_t ssd1306_Init(I2C_HandleTypeDef *hi2c)
     int status = 0;
 
     // Display Off
-    status += ssd1306_WriteCommand(hi2c, 0xAE); 
-    
+    status += ssd1306_WriteCommand(hi2c, 0xAE);
+
     // Set Memory Addressing Mode
-    status += ssd1306_WriteCommand(hi2c, 0x20); 
+    status += ssd1306_WriteCommand(hi2c, 0x20);
     status += ssd1306_WriteCommand(hi2c, 0x00); // 00: Horizontal Addressing Mode
 
     // Set Multiplex Ratio for 64x48 resolution
-    status += ssd1306_WriteCommand(hi2c, 0xA8); 
+    status += ssd1306_WriteCommand(hi2c, 0xA8);
     status += ssd1306_WriteCommand(hi2c, 0x2F); // 48 lines = 48-1 = 0x2F
 
     // Set Display Offset
-    status += ssd1306_WriteCommand(hi2c, 0xD3); 
+    status += ssd1306_WriteCommand(hi2c, 0xD3);
     status += ssd1306_WriteCommand(hi2c, 0x00); // No offset
 
     // Set Display Start Line (0x40 - 0x7F)
-    status += ssd1306_WriteCommand(hi2c, 0x40); 
+    status += ssd1306_WriteCommand(hi2c, 0x40);
 
     // Set Segment Re-map (A0h/A1h)
-    status += ssd1306_WriteCommand(hi2c, 0xA1); 
+    status += ssd1306_WriteCommand(hi2c, 0xA1);
+    status += ssd1306_WriteCommand(hi2c, 0xC8);
 
     // Set COM Output Scan Direction (C0h/C8h)
-    status += ssd1306_WriteCommand(hi2c, 0xC8); 
+    status += ssd1306_WriteCommand(hi2c, 0xC8);
 
     // Set COM Pins Hardware Configuration
-    status += ssd1306_WriteCommand(hi2c, 0xDA); 
+    status += ssd1306_WriteCommand(hi2c, 0xDA);
     status += ssd1306_WriteCommand(hi2c, 0x12); // Standard for 128x64 drivers
 
     // Set Contrast Control
-    status += ssd1306_WriteCommand(hi2c, 0x81); 
+    status += ssd1306_WriteCommand(hi2c, 0x81);
     status += ssd1306_WriteCommand(hi2c, 0xCF); // Medium brightness
 
     // Set Pre-charge Period
-    status += ssd1306_WriteCommand(hi2c, 0xD9); 
+    status += ssd1306_WriteCommand(hi2c, 0xD9);
     status += ssd1306_WriteCommand(hi2c, 0x22);
 
     // Set VCOMH Deselect Level
-    status += ssd1306_WriteCommand(hi2c, 0xDB); 
+    status += ssd1306_WriteCommand(hi2c, 0xDB);
     status += ssd1306_WriteCommand(hi2c, 0x20);
 
     // Charge Pump Setting (Crucial for OLED power)
-    status += ssd1306_WriteCommand(hi2c, 0x8D); 
+    status += ssd1306_WriteCommand(hi2c, 0x8D);
     status += ssd1306_WriteCommand(hi2c, 0x14); // Enable Charge Pump
 
     // Final Display Settings
@@ -108,16 +108,16 @@ void ssd1306_Fill(SSD1306_COLOR color)
 //
 //  Write the screenbuffer with changed to the screen
 //
-void ssd1306_UpdateScreen(I2C_HandleTypeDef *hi2c) 
+void ssd1306_UpdateScreen(I2C_HandleTypeDef *hi2c)
 {
     // Define the Column Address range
     // Most 0.66" screens start from column 32 in a 128-wide driver
-    ssd1306_WriteCommand(hi2c, 0x21); 
+    ssd1306_WriteCommand(hi2c, 0x21);
     ssd1306_WriteCommand(hi2c, 32);           // Column Start
     ssd1306_WriteCommand(hi2c, 32 + 64 - 1);  // Column End (95)
 
     // Define the Page Address range (48 pixels / 8 = 6 pages)
-    ssd1306_WriteCommand(hi2c, 0x22); 
+    ssd1306_WriteCommand(hi2c, 0x22);
     ssd1306_WriteCommand(hi2c, 0);            // Page Start
     ssd1306_WriteCommand(hi2c, 5);            // Page End (0 to 5 = 6 pages)
 
@@ -131,6 +131,25 @@ void ssd1306_UpdateScreen(I2C_HandleTypeDef *hi2c)
 //  Y => Y Coordinate
 //  color => Pixel color
 //
+#if DISPLAY_90_DEGREE
+//rotation 90 degree clockwise
+void ssd1306_DrawPixel(uint8_t x, uint8_t y, SSD1306_COLOR color) {
+    // 逻辑坐标转物理坐标 (顺时针旋转 90 度)
+    // 旋转后：新宽=48, 新高=64
+    uint8_t new_x = y;
+    uint8_t new_y = (SSD1306_WIDTH - 1) - x;
+
+    // 检查越界
+    if (new_x >= SSD1306_HEIGHT || new_y >= SSD1306_WIDTH) return;
+
+    // 写入缓冲区 (按 Page 逻辑)
+    if (color == White) {
+        SSD1306_Buffer[new_x + (new_y / 8) * SSD1306_HEIGHT] |= (1 << (new_y % 8));
+    } else {
+        SSD1306_Buffer[new_x + (new_y / 8) * SSD1306_HEIGHT] &= ~(1 << (new_y % 8));
+    }
+}
+#else
 void ssd1306_DrawPixel(uint8_t x, uint8_t y, SSD1306_COLOR color)
 {
     if (x >= SSD1306_WIDTH || y >= SSD1306_HEIGHT)
@@ -155,7 +174,7 @@ void ssd1306_DrawPixel(uint8_t x, uint8_t y, SSD1306_COLOR color)
         SSD1306_Buffer[x + (y / 8) * SSD1306_WIDTH] &= ~(1 << (y % 8));
     }
 }
-
+#endif
 
 //
 //  Draw 1 char to the screen buffer
